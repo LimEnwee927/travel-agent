@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+config.py
+long_term_memory.json
+rag_documents.json
+rag_index.faiss
