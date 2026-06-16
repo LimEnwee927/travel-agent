@@ -1,6 +1,10 @@
 import requests
 import os
-
+import os
+try:
+    from config import GROQ_API_KEY
+except ImportError:
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 SERPER_API_KEY = os.environ.get("SERPER_API_KEY")
 OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY")
