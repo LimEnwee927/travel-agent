@@ -1,11 +1,12 @@
 from openai import OpenAI
-from config import GROQ_API_KEY
 from prompts import SYSTEM_PROMPT
 from tools import TOOLS, search_web, get_weather, search_hotels
 from rag import load_rag, retrieve          # ← ADD THIS
 import json
 import os
 import numpy as np
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 client = OpenAI(
     api_key=GROQ_API_KEY,

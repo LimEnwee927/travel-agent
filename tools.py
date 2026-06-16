@@ -1,7 +1,9 @@
 import requests
 import os
-from config import SERPER_API_KEY, OPENWEATHER_API_KEY
 
+
+SERPER_API_KEY = os.environ.get("SERPER_API_KEY")
+OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY")
 def search_web(query: str) -> str:
     """Search the web for travel information."""
     url = "https://google.serper.dev/search"

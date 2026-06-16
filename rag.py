@@ -11,7 +11,8 @@ import wikipediaapi
 from bs4 import BeautifulSoup
 import requests
 from openai import OpenAI
-from config import GROQ_API_KEY
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
 
 client = OpenAI(
     api_key=GROQ_API_KEY,
