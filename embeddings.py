@@ -1,11 +1,28 @@
-from sentence_transformers import SentenceTransformer
+import hashlib
+import re
+import numpy as np
 
-# Local CPU embedding model shared by long-term memory (agent.py) and RAG
-# (rag.py). Groq's API hosts chat/audio models only - it has no embeddings
-# endpoint - so embeddings run locally instead of through the LLM provider.
-EMBEDDING_DIM = 384
+# Lightweight embedding shared by long-term memory (agent.py) and RAG
+# (rag.py): a normalized feature-hashed bag-of-words vector, not a
+# transformer model. Render's free tier (512MB) can't fit torch +
+# sentence-transformers alongside the rest of the app - this keeps the same
+# FAISS + cosine-similarity architecture, just a far cheaper vector
+# representation with no model download and near-zero import cost.
+EMBEDDING_DIM = 256
 
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 def get_embedding(text: str):
-    return _model.encode(text, normalize_embeddings=True).tolist()
+    vec = np.zeros(EMBEDDING_DIM, dtype="float32")
+    tokens = _TOKEN_RE.findall(text.lower())
+
+    for token in tokens:
+        digest = int(hashlib.md5(token.encode()).hexdigest(), 16)
+        index = digest % EMBEDDING_DIM
+        sign = 1.0 if (digest // EMBEDDING_DIM) % 2 == 0 else -1.0
+        vec[index] += sign
+
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec = vec / norm
+    return vec.tolist()

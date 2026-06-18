@@ -25,7 +25,10 @@ REST client ──┘                            │
 Groq (OpenAI-compatible API, `llama-3.3-70b-versatile`) is the only LLM
 provider; it's fast and free-tier friendly. It has no embeddings endpoint, so
 embeddings (for both long-term memory and RAG) run locally via
-`sentence-transformers` (`all-MiniLM-L6-v2`, ~80MB, CPU-only, no API key).
+`embeddings.py` - a dependency-free hashing-trick bag-of-words vector
+(no torch/transformers), chosen to fit comfortably inside Render's free-tier
+512MB memory limit. The FAISS + cosine-similarity architecture around it is
+unchanged; only the vector representation is cheaper.
 
 ## Why these tools
 
