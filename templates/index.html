@@ -36,6 +36,12 @@
         const input = document.getElementById("user-input");
         const btn = document.getElementById("send-btn");
 
+        let sessionId = localStorage.getItem("travel_session_id");
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            localStorage.setItem("travel_session_id", sessionId);
+        }
+
         input.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
 
         function addMessage(text, role) {
@@ -60,9 +66,13 @@
                 const res = await fetch("/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: msg })
+                    body: JSON.stringify({ message: msg, session_id: sessionId })
                 });
                 const data = await res.json();
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                    localStorage.setItem("travel_session_id", sessionId);
+                }
                 typing.textContent = data.reply;
                 typing.classList.remove("typing");
             } catch (err) {

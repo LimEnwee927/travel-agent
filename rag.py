@@ -11,7 +11,7 @@ import wikipediaapi
 from bs4 import BeautifulSoup
 import requests
 from openai import OpenAI
-import os
+from embeddings import get_embedding as _get_embedding, EMBEDDING_DIM
 try:
     from config import GROQ_API_KEY
 except ImportError:
@@ -29,11 +29,7 @@ documents = []
 index = None
 
 def get_embedding(text):
-    response = client.embeddings.create(
-        model="nomic-embed-text-v1_5",
-        input=text
-    )
-    return np.array(response.data[0].embedding, dtype="float32")
+    return np.array(_get_embedding(text), dtype="float32")
 
 def save_rag():
     if not FAISS_AVAILABLE:
@@ -53,7 +49,7 @@ def load_rag():
         index = faiss.read_index(INDEX_FILE)
         print(f"📚 Loaded {len(documents)} chunks from RAG store.")
     else:
-        index = faiss.IndexFlatL2(768)
+        index = faiss.IndexFlatL2(EMBEDDING_DIM)
         print("📚 Fresh RAG store created.")
 
 def retrieve(query: str, top_k: int = 4) -> str:
@@ -67,6 +63,43 @@ def retrieve(query: str, top_k: int = 4) -> str:
             doc = documents[i]
             results.append(f"[{doc['source']}]\n{doc['text']}")
     return "\n\n---\n\n".join(results)
+
+def multi_hop_retrieve(query: str, top_k: int = 4) -> str:
+    """Two-hop retrieval: an initial pass on the raw query, then a second
+    pass on a follow-up query derived from what the first hop found, so the
+    agent can chase specifics (e.g. a neighborhood or attraction named in
+    hop 1) instead of relying on a single generic search."""
+    hop1 = retrieve(query, top_k)
+    if not hop1:
+        return hop1
+
+    followup_query = None
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Travel research so far for the request '{query}':\n{hop1[:800]}\n\n"
+                    "Suggest ONE specific follow-up search query to find more detailed "
+                    "travel info (e.g. about a specific neighborhood, attraction, or food "
+                    "mentioned above). Reply with only the search query text."
+                )
+            }],
+            temperature=0
+        )
+        followup_query = response.choices[0].message.content.strip()
+    except Exception:
+        followup_query = None
+
+    if not followup_query:
+        return hop1
+
+    hop2 = retrieve(followup_query, top_k)
+    if not hop2 or hop2 == hop1:
+        return hop1
+
+    return hop1 + "\n\n---\n\n" + hop2
 
 def chunk_text(text, source, chunk_size=300, overlap=50):
     if not FAISS_AVAILABLE:
